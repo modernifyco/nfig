@@ -1,0 +1,25 @@
+{
+  "name": "nfig-common",
+  "version": "0.1.1",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "rebuild": "run-s clean build"
+  },
+  "keywords": [
+    "nfig",
+    "config",
+    "configuration",
+    "env",
+    "environment"
+  ],
+  "peerDependencies": {
+    "error-lib": "^1.0.10"
+  },
+  "devDependencies": {
+    "error-lib": "^1.0.10"
+  }
+}
