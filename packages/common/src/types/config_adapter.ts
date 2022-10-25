@@ -1,6 +1,6 @@
 import { Primitives } from './primitives';
 
-export interface Adapter {
+export interface ConfigAdapter {
   /* Adapter-level methods */
 
   /**
@@ -8,25 +8,25 @@ export interface Adapter {
    * @param key Configuration key
    * @param value Configuration value
    */
-  add(key: string, value: Primitives): Promise<Adapter>;
+  add(key: string, value: Primitives): Promise<ConfigAdapter>;
 
   /**
    * Remove a configuration by its key
    * @param key Configuration key
    */
-  remove(key: string): Promise<Adapter>;
+  remove(key: string): Promise<ConfigAdapter>;
 
   /**
    * Update a configuration value
    * @param key Configuration key
    * @param value New value
    */
-  update(key: string, value: Primitives): Promise<Adapter>;
+  update(key: string, value: Primitives): Promise<ConfigAdapter>;
 
   /**
    * Remove all the configuration keys
    */
-  clear(): Promise<Adapter>;
+  clear(): Promise<ConfigAdapter>;
 
   /* Application-level methods */
 
