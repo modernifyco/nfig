@@ -1,20 +1,240 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { flow } from 'lodash';
+import { expand } from 'dotenv-expand';
 
 import { AppConfigV1 } from '../models/config_v1.model';
+import { Config } from '../../database';
+import { Repository } from 'typeorm';
+
+// type ConfigRecord = {
+//   appName: string;
+//   envName: string;
+//   key: string;
+//   val: string;
+// };
 
 @Injectable()
 export class ConfigService {
-  constructor() {}
+  constructor(
+    @InjectRepository(Config) protected configRepo: Repository<Config>,
+  ) {}
 
-  async getAllApps(): Promise<Array<AppConfigV1>> {}
+  protected groupConfigs(configs: Array<Config>): Record<string, AppConfigV1> {
+    return configs.reduce((acc, config) => {
+      // ensure app exist
+      acc[config.appName] ||= {};
+      // ensure environment exist
+      acc[config.appName][config.envName] ||= {};
+      // set key/value pair
+      acc[config.appName][config.envName][config.key] = config.val;
 
-  async getAppConfig(appName: string): Promise<AppConfigV1> {}
-  async deleteAppConfig(appName: string): Promise<boolean> {}
-  async setAppConfig(appName: string): Promise<AppConfigV1> {}
+      return acc;
+    }, {} as Record<string, AppConfigV1>);
+  }
+
+  protected expandConfigs(
+    configs: Record<string, AppConfigV1>,
+  ): Record<string, AppConfigV1> {
+    for (const appName in configs) {
+      for (const envName in configs[appName]) {
+        // read & expand the values
+        const expandedObject = expand({
+          ignoreProcessEnv: true,
+          parsed: {
+            ...configs[appName][envName],
+          },
+        });
+
+        // assign to the object
+        configs[appName][envName] = expandedObject.parsed;
+      }
+    }
+
+    return configs;
+  }
+
+  protected processConfigs(
+    configs: Array<Config>,
+  ): Record<string, AppConfigV1> {
+    return flow(this.groupConfigs, this.expandConfigs)(configs);
+  }
+
+  /* General services */
+
+  async getAllApps(): Promise<Record<string, AppConfigV1>> {
+    return this.processConfigs(await this.configRepo.find());
+  }
+
+  /* Application-level services */
+
+  async setAppConfig(appName: string, config: AppConfigV1): Promise<void> {
+    const q = this.configRepo.createQueryBuilder('cfg');
+
+    try {
+      for (const envName in config) {
+        for (const key in config[envName]) {
+          this.dbInstance.data.configs.push({
+            appName,
+            envName,
+            key,
+
+            val: config[envName][key],
+          });
+        }
+      }
+
+      await this.dbInstance.write();
+    } catch (err) {}
+  }
+
+  async getAppConfig(appName: string): Promise<AppConfigV1 | undefined> {
+    await this.ensureInitialized();
+
+    const configs = this.processConfigs(
+      this.dbInstance.data.configs.filter((_) => _.appName === appName),
+    );
+
+    return configs[appName];
+  }
+
+  async deleteAppConfig(appName: string): Promise<void> {
+    await this.ensureInitialized();
+
+    // exclude requested application's configuration from database
+    this.dbInstance.data.configs = this.dbInstance.data.configs.filter(
+      (_) => _.appName !== appName,
+    );
+
+    // save the changes
+    await this.dbInstance.write();
+  }
+
+  /* Environment-level services */
+
+  async setEnvConfig(
+    appName: string,
+    envName: string,
+    config: Record<string, string>,
+  ): Promise<void> {
+    await this.ensureInitialized();
+
+    for (const key in config) {
+      // delete previous key/value pair
+      this.dbInstance.data.configs = this.dbInstance.data.configs.filter(
+        (_) =>
+          (_.appName === appName && _.envName === envName && _.key === key) ===
+          false,
+      );
+
+      // insert new key/value pair
+      this.dbInstance.data.configs.push({
+        appName,
+        envName,
+        key,
+        val: config[key],
+      });
+    }
+
+    await this.dbInstance.write();
+  }
+
+  async getEnvConfig(
+    appName: string,
+    envName: string,
+  ): Promise<Record<string, string> | undefined> {
+    await this.ensureInitialized();
+
+    const configs = this.processConfigs(
+      this.dbInstance.data.configs.filter(
+        (_) => _.appName === appName && _.envName === envName,
+      ),
+    );
+
+    // ensure app exist before accessing nested properties
+    if (typeof configs[appName] === 'undefined') {
+      return undefined;
+    }
+
+    return configs[appName][envName];
+  }
+
+  async deleteEnvConfig(appName: string, envName: string): Promise<void> {
+    await this.ensureInitialized();
+
+    this.dbInstance.data.configs = this.dbInstance.data.configs.filter(
+      (_) => (_.appName === appName && _.envName === envName) === false,
+    );
+
+    // save the changes
+    await this.dbInstance.write();
+  }
+
+  /* Configuration-level endpoints */
+  async setConfig(
+    appName: string,
+    envName: string,
+    key: string,
+    val: string,
+  ): Promise<void> {
+    await this.ensureInitialized();
+
+    // delete previous key/value pair
+    this.dbInstance.data.configs = this.dbInstance.data.configs.filter(
+      (_) =>
+        (_.appName === appName && _.envName === envName && _.key === key) ===
+        false,
+    );
+
+    this.dbInstance.data.configs.push({
+      appName,
+      envName,
+      key,
+      val,
+    });
+
+    await this.dbInstance.write();
+  }
+
+  async getConfig(
+    appName: string,
+    envName: string,
+    key: string,
+  ): Promise<string | undefined> {
+    await this.ensureInitialized();
+
+    const configs = this.processConfigs(
+      this.dbInstance.data.configs.filter(
+        (_) => _.appName === appName && _.envName === envName,
+      ),
+    );
+
+    // ensure app exist before accessing nested properties
+    if (typeof configs[appName] === 'undefined') {
+      return undefined;
+    }
+
+    if (typeof configs[appName][envName] === 'undefined') {
+      return undefined;
+    }
+
+    return configs[appName][envName][key];
+  }
 
   async deleteConfig(
     appName: string,
     envName: string,
-    configKey: string,
-  ): Promise<boolean> {}
+    key: string,
+  ): Promise<void> {
+    await this.ensureInitialized();
+
+    this.dbInstance.data.configs = this.dbInstance.data.configs.filter(
+      (_) =>
+        (_.appName === appName && _.envName === envName && _.key === key) ===
+        false,
+    );
+
+    // save the changes
+    await this.dbInstance.write();
+  }
 }

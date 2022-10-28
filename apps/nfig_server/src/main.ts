@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { VersioningType, RequestMethod } from '@nestjs/common';
 import * as helmet from 'helmet';
