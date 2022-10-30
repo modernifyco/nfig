@@ -5,7 +5,7 @@ import { expand } from 'dotenv-expand';
 
 import { AppConfigV1 } from '../models/config_v1.model';
 import { Config } from '../../database';
-import { Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 
 // type ConfigRecord = {
 //   appName: string;
@@ -16,9 +16,7 @@ import { Repository } from 'typeorm';
 
 @Injectable()
 export class ConfigService {
-  constructor(
-    @InjectRepository(Config) protected configRepo: Repository<Config>,
-  ) {}
+  constructor(protected readonly dataSource: DataSource) {}
 
   protected groupConfigs(configs: Array<Config>): Record<string, AppConfigV1> {
     return configs.reduce((acc, config) => {
@@ -63,15 +61,22 @@ export class ConfigService {
   /* General services */
 
   async getAllApps(): Promise<Record<string, AppConfigV1>> {
-    return this.processConfigs(await this.configRepo.find());
+    return this.processConfigs(
+      await this.dataSource.getRepository(Config).find(),
+    );
   }
 
   /* Application-level services */
 
   async setAppConfig(appName: string, config: AppConfigV1): Promise<void> {
-    const q = this.configRepo.createQueryBuilder('cfg');
+    const queryRunner = this.dataSource.createQueryRunner();
 
     try {
+      const repo = queryRunner.connection.getRepository(Config);
+
+      // delete current application configuration
+      await repo.delete({ appName: appName });
+
       for (const envName in config) {
         for (const key in config[envName]) {
           this.dbInstance.data.configs.push({
@@ -84,8 +89,17 @@ export class ConfigService {
         }
       }
 
-      await this.dbInstance.write();
-    } catch (err) {}
+      // save all the changes
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      // log the error
+
+      // something bad happened! rollback changes
+      await queryRunner.rollbackTransaction();
+    } finally {
+      // no matter what, release the lock
+      await queryRunner.release();
+    }
   }
 
   async getAppConfig(appName: string): Promise<AppConfigV1 | undefined> {
