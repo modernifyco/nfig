@@ -1,6 +1,6 @@
 {
   "name": "nfig-common",
-  "version": "0.1.1",
+  "version": "0.1.8",
   "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,10 +14,12 @@
     "config",
     "configuration",
     "env",
-    "environment"
+    "environment",
+    "variable",
+    "dev"
   ],
   "peerDependencies": {
-    "error-lib": "^1.0.10"
+    "error-lib": "^1.x"
   },
   "devDependencies": {
     "error-lib": "^1.0.10"
