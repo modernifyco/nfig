@@ -1,6 +1,6 @@
 {
-  "name": "nfig-common",
-  "version": "0.1.8",
+  "name": "nfig-provider-fs",
+  "version": "0.1.0",
   "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,12 +16,18 @@
     "env",
     "environment",
     "variable",
-    "dev"
+    "dev",
+    "nfig-provider"
   ],
-  "peerDependencies": {
-    "error-lib": "^1.x"
-  },
   "devDependencies": {
-    "error-lib": "^1.0.10"
+    "@types/glob": "^8.0.0",
+    "dotenv": "^16.0.3",
+    "glob": "^8.0.3",
+    "nfig-common": "^0.1.8"
+  },
+  "peerDependencies": {
+    "dotenv": "^16.x",
+    "glob": "^8.x",
+    "nfig-common": "^0.x"
   }
 }
