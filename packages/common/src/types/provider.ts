@@ -97,5 +97,5 @@ export interface Provider {
    * @param envName Environment name
    * @param key Configuration key
    */
-  delConfig(appName: string, envName: string, key: string): Promise<void>;
+  deleteConfig(appName: string, envName: string, key: string): Promise<void>;
 }
