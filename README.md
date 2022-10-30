@@ -1,2 +1,2 @@
 # nfig
-Distributed configuration CLI
+Developer-friendly environment configuration sharing tool.
