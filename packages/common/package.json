@@ -1,6 +1,6 @@
 {
   "name": "nfig-common",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "commonjs",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
