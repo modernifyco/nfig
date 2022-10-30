@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join as joinPath, resolve as resolvePath } from 'node:path';
+import { join as joinPath, resolve as resolvePath, basename } from 'node:path';
 import { EOL } from 'node:os';
 
 import { parse as parseEnvFile } from 'dotenv';
@@ -78,7 +78,8 @@ export class FileSystemProvider implements Provider {
   protected readFiles(pattern: string): Record<string, AppConfig> {
     const files = this.findFiles(pattern);
 
-    return files.reduce((acc, fileName) => {
+    return files.reduce((acc, filePath) => {
+      const fileName = basename(filePath, undefined);
       const [appName, envName] = fileName.split('.');
 
       // safely create application or use existing one
@@ -227,7 +228,7 @@ export class FileSystemProvider implements Provider {
     });
   }
 
-  async delConfig(
+  async deleteConfig(
     appName: string,
     envName: string,
     key: string,
