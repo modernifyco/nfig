@@ -1,0 +1,6 @@
+
+bin/
+src/
+template.sqlite
+tsconfig.json
+tsconfig.build.json

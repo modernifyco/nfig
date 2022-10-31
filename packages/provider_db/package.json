@@ -1,0 +1,52 @@
+{
+  "name": "nfig-provider-db",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "rimraf dist",
+    "rebuild": "run-s clean build",
+    "typeorm": "ts-node --project ./tsconfig.build.json --require reflect-metadata ./bin/typeorm",
+    "--SQLITE--": "",
+    "sqlite:migrate": "npm run typeorm -- migration:run --config ./src/configs/sqlite.cli_config.ts",
+    "sqlite:rollback": "npm run typeorm -- migration:revert --config ./src/configs/sqlite.cli_config.ts",
+    "sqlite:diff": "npm run typeorm -- schema:log --config ./src/configs/sqlite.cli_config.ts",
+    "sqlite:migration:generate": "npm run typeorm -- migration:generate --config ./src/configs/sqlite.cli_config.ts",
+    "sqlite:migration:list": "npm run typeorm -- migration:show --config ./src/configs/sqlite.cli_config.ts",
+    "sqlite:migration:ls": "npm run sqlite:migration:list",
+    "--POSTGRES--": "",
+    "pg:migrate": "npm run typeorm -- migration:run --config ./src/configs/pg.cli_config.ts",
+    "pg:rollback": "npm run typeorm -- migration:revert --config ./src/configs/pg.cli_config.ts",
+    "pg:diff": "npm run typeorm -- schema:log --config ./src/configs/pg.cli_config.ts",
+    "pg:migration:generate": "npm run typeorm -- migration:generate --config ./src/configs/pg.cli_config.ts",
+    "pg:migration:list": "npm run typeorm -- migration:show --config ./src/configs/pg.cli_config.ts",
+    "pg:migration:ls": "npm run pg:migration:list"
+  },
+  "keywords": [
+    "nfig",
+    "config",
+    "configuration",
+    "env",
+    "environment",
+    "variable",
+    "dev"
+  ],
+  "devDependencies": {
+    "better-sqlite3": "^7.6.2",
+    "env-var": "^7.3.0",
+    "nfig-common": "^0.1.9",
+    "pg": "^8.8.0",
+    "reflect-metadata": "^0.1.13",
+    "typeorm": "^0.2.45"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^7.x",
+    "env-var": "^7.x",
+    "nfig-common": "^0.x",
+    "pg": "^8.x",
+    "reflect-metadata": "^0.1.x",
+    "typeorm": "^0.2.x"
+  }
+}
