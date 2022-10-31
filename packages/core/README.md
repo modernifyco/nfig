@@ -1,3 +1,0 @@
-# nfig
-
-Shared configuration
