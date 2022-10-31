@@ -1,6 +1,8 @@
 
+coverage/
 bin/
 src/
+jest.config.js
 template.sqlite
 tsconfig.json
 tsconfig.build.json
