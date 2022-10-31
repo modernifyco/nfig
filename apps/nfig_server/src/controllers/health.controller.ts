@@ -6,7 +6,7 @@ import {
   HealthCheck,
 } from '@nestjs/terminus';
 
-import { MAX_HEAP_SIZE } from '../../../configs/consts';
+import { MAX_HEAP_SIZE } from '../../configs/consts';
 
 @Controller({ path: '/health', version: VERSION_NEUTRAL })
 export class HealthController {

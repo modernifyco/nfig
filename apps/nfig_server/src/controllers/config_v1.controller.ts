@@ -7,10 +7,10 @@ import {
   Body,
   NotFoundException,
 } from '@nestjs/common';
+import { AppConfig } from 'nfig-common';
 
-import { API_VERSIONS } from '../../../configs/consts';
+import { API_VERSIONS } from '../configs/consts';
 import { ConfigService } from '../services/config.service';
-import { AppConfigV1 } from '../models/config_v1.model';
 
 @Controller({ path: '/config', version: API_VERSIONS.v1 })
 export class ConfigControllerV1 {
@@ -19,7 +19,7 @@ export class ConfigControllerV1 {
   /* General endpoints */
 
   @Get()
-  async getAllApps(): Promise<Record<string, AppConfigV1>> {
+  async getAllApps(): Promise<Record<string, AppConfig>> {
     return this.configService.getAllApps();
   }
 
@@ -28,13 +28,13 @@ export class ConfigControllerV1 {
   @Post(`/:app`)
   async setAppConfig(
     @Param('app') appName: string,
-    @Body() appConfig: AppConfigV1,
+    @Body() appConfig: AppConfig,
   ): Promise<void> {
     return this.configService.setAppConfig(appName, appConfig);
   }
 
   @Get('/:app')
-  async getAppConfig(@Param('app') appName: string): Promise<AppConfigV1> {
+  async getAppConfig(@Param('app') appName: string): Promise<AppConfig> {
     const appConfig = await this.configService.getAppConfig(appName);
 
     if (typeof appConfig === 'undefined') {

@@ -2,6 +2,7 @@ import { join as joinPath } from 'node:path';
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { sqliteConnectionOptions } from 'nfig-provider-db';
 
 @Module({
   imports: [
@@ -24,3 +25,5 @@ import { TypeOrmModule } from '@nestjs/typeorm';
   ],
 })
 export class DatabaseModule {}
+
+// nestjs > 7.1.5

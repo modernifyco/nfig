@@ -1,11 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { flow } from 'lodash';
 import { expand } from 'dotenv-expand';
 
-import { AppConfigV1 } from '../models/config_v1.model';
-import { Config } from '../../database';
-import { DataSource } from 'typeorm';
+import { Provider } from 'nfig-common';
 
 // type ConfigRecord = {
 //   appName: string;
@@ -16,7 +13,7 @@ import { DataSource } from 'typeorm';
 
 @Injectable()
 export class ConfigService {
-  constructor(protected readonly dataSource: DataSource) {}
+  constructor(protected readonly provider: Provider) {}
 
   protected groupConfigs(configs: Array<Config>): Record<string, AppConfigV1> {
     return configs.reduce((acc, config) => {
