@@ -1,4 +1,12 @@
 {
-  "extends": "./tsconfig.json",
-  "exclude": ["**/*.spec.ts", "./bin", "./src/configs/*.cli_*.ts"]
+  "compilerOptions": {
+    "rootDir": "./src"
+  },
+  "exclude": [
+    "./bin",
+    "**/*.spec.ts",
+    "coverage/**",
+    "./src/configs/*.cli_*.ts",
+    "jest.config.js"
+  ]
 }
