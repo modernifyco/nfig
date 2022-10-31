@@ -8,7 +8,6 @@
     "build": "tsc",
     "clean": "rimraf dist",
     "rebuild": "run-s clean build",
-    "jest": "ts-node --require reflect-metadata ./bin/jest",
     "test": "jest",
     "test:watch": "npm run test -- --watch",
     "typeorm": "ts-node --require reflect-metadata ./bin/typeorm",
