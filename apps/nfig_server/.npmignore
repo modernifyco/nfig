@@ -1,0 +1,6 @@
+coverage/
+data/
+src/
+.gitignore
+tsconfig.json
+tsconfig.build.json

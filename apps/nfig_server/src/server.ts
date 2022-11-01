@@ -1,32 +1,27 @@
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { VersioningType, RequestMethod } from '@nestjs/common';
-import * as helmet from 'helmet';
+import express, { Express } from 'express';
+import morgan from 'morgan';
+import { Provider } from 'nfig-common';
+import cors from 'cors';
+import helmet from 'helmet';
 
-import { API_VERSIONS } from './configs/consts';
-import { AppModule } from './app.module';
+import * as configsV1 from './api/configs_v1';
+import * as health from './api/health';
 
-(async () => {
-  const app = await NestFactory.create(AppModule, {
-    autoFlushLogs: true,
-    cors: true,
-  });
+export type AppFactoryOptions = {
+  provider: Provider;
+};
 
+export const create = ({ provider }: AppFactoryOptions): Express => {
+  const app = express();
+
+  app.use(cors());
   app.use(helmet.hidePoweredBy());
+  app.use(morgan('combined'));
 
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: API_VERSIONS.default,
-  });
+  app.disable('etag');
 
-  app.setGlobalPrefix('/api', {
-    exclude: [
-      {
-        path: '/health',
-        method: RequestMethod.ALL,
-      },
-    ],
-  });
+  app.use('/health', health.create());
+  app.use('/api/v1/configs', configsV1.create({ provider }));
 
-  await app.listen(3000);
-})().catch(console.error);
+  return app;
+};
