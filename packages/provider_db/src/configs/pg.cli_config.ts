@@ -1,10 +1,10 @@
 import { ConnectionOptions } from 'typeorm';
 
-import { postgresConnectionOptions, PG_MIGRATIONS_DIR } from './pg.config';
+import { PG_MIGRATIONS_DIR, createPgConnectionParams } from './pg.config';
 import { ENTITIES_DIR } from './typeorm_shared.config';
 
 export const ormconfig = {
-  ...postgresConnectionOptions,
+  ...createPgConnectionParams(),
 
   /* CLI */
   cli: { entitiesDir: ENTITIES_DIR, migrationsDir: PG_MIGRATIONS_DIR },

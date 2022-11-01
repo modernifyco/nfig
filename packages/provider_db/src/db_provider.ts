@@ -70,8 +70,6 @@ export class DatabaseProvider implements Provider {
   }
 
   async deleteAppConfig(appName: string): Promise<void> {
-    console.log('APP_NAME: ', appName);
-
     await this.repository.delete({ appName });
   }
 
