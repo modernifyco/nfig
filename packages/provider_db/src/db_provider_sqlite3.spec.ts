@@ -3,8 +3,8 @@ import { unlinkSync } from 'node:fs';
 import rimraf from 'rimraf';
 import { Connection } from 'typeorm';
 
-import { DatabaseProvider } from '../dist/db_provider';
-import { sqliteConnectionOptions } from '../dist/configs/sqlite.config';
+import { DatabaseProvider } from './db_provider';
+import { createSqliteConnectionParams } from './configs';
 
 const APP_CONFIG = {
   dev: {
@@ -29,7 +29,7 @@ describe('[nfig][provider][db]', () => {
 
   beforeAll(async () => {
     const connection = new Connection({
-      ...sqliteConnectionOptions,
+      ...createSqliteConnectionParams(),
 
       database: DATABASE_PATH,
     } as any);

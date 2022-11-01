@@ -1,23 +1,36 @@
 {
   "name": "nfigd",
-  "version": "0.0.1",
-  "scripts": {},
+  "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./bin/nfigd.js",
+  "bin": "./bin/nfigd.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "rebuild": "run-s clean build",
+    "debug": "ts-node ./src/cli.ts"
+  },
   "dependencies": {
+    "body-parser": "^1.20.1",
     "bytes": "^3.1.2",
+    "cors": "^2.8.5",
     "dotenv-expand": "^9.0.0",
     "env-var": "^7.3.0",
+    "express": "^4.18.2",
     "helmet": "^6.0.0",
+    "morgan": "^1.10.0",
     "nfig-common": "^0.1.9",
-    "nfig-provider-db": "^0.1.0",
+    "nfig-provider-db": "^0.1.4",
     "reflect-metadata": "^0.1.13",
-    "rimraf": "^3.0.2",
-    "sqlite3": "^5.1.2",
     "typeorm": "^0.2.45",
     "yargs": "^17.6.0"
   },
   "devDependencies": {
+    "@types/body-parser": "^1.19.2",
     "@types/bytes": "^3.1.1",
-    "@types/express": "^4.17.13",
-    "@types/helmet": "^4.0.0"
+    "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.14",
+    "@types/helmet": "^4.0.0",
+    "@types/morgan": "^1.9.3"
   }
 }

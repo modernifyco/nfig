@@ -10,17 +10,19 @@ import {
 
 export const SQLITE_MIGRATIONS_DIR = joinPath(MIGRATIONS_DIR, 'sqlite');
 
-export const sqliteConnectionOptions: ConnectionOptions = {
-  ...sharedDataSourceOptions,
+export const createSqliteConnectionParams = () => {
+  return {
+    ...sharedDataSourceOptions,
 
-  /* General */
-  type: 'better-sqlite3',
+    /* General */
+    type: 'better-sqlite3',
 
-  /* Connection options */
-  database: joinPath(process.cwd(), 'template.sqlite'),
+    /* Connection options */
+    database: joinPath(process.cwd(), 'template.sqlite'),
 
-  /* List of entities/migrations */
-  migrations: [
-    joinPath(SQLITE_MIGRATIONS_DIR, '**', `*${ACCEPTED_EXTENSIONS}`),
-  ],
+    /* List of entities/migrations */
+    migrations: [
+      joinPath(SQLITE_MIGRATIONS_DIR, '**', `*${ACCEPTED_EXTENSIONS}`),
+    ],
+  } as ConnectionOptions;
 };

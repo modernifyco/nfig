@@ -10,23 +10,26 @@ import {
   ACCEPTED_EXTENSIONS,
 } from './typeorm_shared.config';
 
-const DB_URL = env('NFIG_PG_DB_URL').required().asUrlString();
-const DB_SCHEMA = env('NFIG_PG_DB_SCHEMA').default('public').asString();
 export const PG_MIGRATIONS_DIR = joinPath(MIGRATIONS_DIR, 'pg');
 
-export const postgresConnectionOptions = {
-  ...sharedDataSourceOptions,
+export const createPgConnectionParams = () => {
+  const DB_URL = env('NFIG_PG_DB_URL').required().asUrlString();
+  const DB_SCHEMA = env('NFIG_PG_DB_SCHEMA').default('public').asString();
 
-  /* General */
-  type: 'postgres',
-  installExtensions: true,
-  applicationName: `${MODULE_NAME}_database_cli`,
+  return {
+    ...sharedDataSourceOptions,
 
-  /* Connection options */
-  url: DB_URL,
-  schema: DB_SCHEMA,
-  connectTimeoutMS: 15 * 1000,
+    /* General */
+    type: 'postgres',
+    installExtensions: true,
+    applicationName: `${MODULE_NAME}_database_cli`,
 
-  /* List of entities/migrations */
-  migrations: [joinPath(PG_MIGRATIONS_DIR, '**', `*${ACCEPTED_EXTENSIONS}`)],
-} as Partial<ConnectionOptions>;
+    /* Connection options */
+    url: DB_URL,
+    schema: DB_SCHEMA,
+    connectTimeoutMS: 15 * 1000,
+
+    /* List of entities/migrations */
+    migrations: [joinPath(PG_MIGRATIONS_DIR, '**', `*${ACCEPTED_EXTENSIONS}`)],
+  } as Partial<ConnectionOptions>;
+};
