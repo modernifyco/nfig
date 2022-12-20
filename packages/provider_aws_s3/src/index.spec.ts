@@ -1,8 +1,7 @@
-import { join as joinPath } from 'node:path';
-import { mkdirSync } from 'node:fs';
-import rimraf from 'rimraf';
+import { S3Client } from '@aws-sdk/client-s3';
+import { get as env } from 'env-var';
 
-import { FileSystemProvider } from './index';
+import { AwsS3Provider } from './index';
 
 const APP_CONFIG = {
   dev: {
@@ -21,31 +20,38 @@ const APP_CONFIG = {
   },
 };
 
-describe('[nfig][provider][fs]', () => {
-  const ROOT_DIR = joinPath(__dirname, 'tmp');
-  let instance: FileSystemProvider;
+const sleep = (n: number): Promise<void> =>
+  new Promise((resolve, reject) => setTimeout(() => resolve(), n * 1000));
+
+const waitForS3Sync = () => sleep(1);
+
+describe('[nfig][provider][aws][s3]', () => {
+  let instance: AwsS3Provider;
 
   beforeAll(() => {
-    mkdirSync(ROOT_DIR);
-    instance = new FileSystemProvider({ rootDir: ROOT_DIR });
+    instance = new AwsS3Provider({
+      bucketName: env('BUCKET_NAME').required().asString(),
+      s3Client: new S3Client({}),
+    });
   });
 
   beforeEach(async () => {
     await instance.setAppConfig('app_1', APP_CONFIG);
     await instance.setAppConfig('app_2', APP_CONFIG);
+
+    await waitForS3Sync();
   });
 
   afterEach(async () => {
     await instance.clear();
-  });
 
-  afterAll(() => {
-    rimraf.sync(ROOT_DIR);
+    await waitForS3Sync();
   });
 
   describe('setAppConfig', () => {
     test('save a new app config', async () => {
       await instance.setAppConfig('app_3', APP_CONFIG);
+      await waitForS3Sync();
 
       const app3Config = await instance.getAppConfig('app_3');
       expect(app3Config).toEqual(APP_CONFIG);
@@ -62,6 +68,8 @@ describe('[nfig][provider][fs]', () => {
         },
         prod: { ...APP_CONFIG.prod },
       });
+
+      await waitForS3Sync();
 
       const newConfig = await instance.getAppConfig('app_1');
 
@@ -92,6 +100,8 @@ describe('[nfig][provider][fs]', () => {
     test('delete app name completely', async () => {
       await instance.deleteAppConfig('app_1');
 
+      await waitForS3Sync();
+
       const app1Config = await instance.getAppConfig('app_1');
 
       expect(app1Config).toBeUndefined();
@@ -102,6 +112,8 @@ describe('[nfig][provider][fs]', () => {
 
     test('delete non existing app', async () => {
       await instance.deleteAppConfig('non_existing_app');
+
+      await waitForS3Sync();
 
       const configs = await instance.getAll();
       expect(Object.keys(configs)).toHaveLength(2);
@@ -126,6 +138,8 @@ describe('[nfig][provider][fs]', () => {
   describe('clear', () => {
     test('return no record after clearing configs', async () => {
       await instance.clear();
+
+      await waitForS3Sync();
 
       const configs = await instance.getAll();
       expect(Object.keys(configs)).toHaveLength(0);
@@ -234,6 +248,8 @@ describe('[nfig][provider][fs]', () => {
     test('set config value', async () => {
       await instance.setConfig('app_1', 'dev', 'NEW_KEY', 'NEW_VALUE');
 
+      await waitForS3Sync();
+
       const config = await instance.getConfig('app_1', 'dev', 'NEW_KEY');
       expect(config).toBe('NEW_VALUE');
     });
@@ -246,6 +262,8 @@ describe('[nfig][provider][fs]', () => {
         'NEW_VALUE',
       );
 
+      await waitForS3Sync();
+
       const config = await instance.getConfig(
         'non_existing_app',
         'dev',
@@ -257,12 +275,16 @@ describe('[nfig][provider][fs]', () => {
     test('set config on non-existing environment', async () => {
       await instance.setConfig('app_1', 'new_env', 'NEW_KEY', 'NEW_VALUE');
 
+      await waitForS3Sync();
+
       const config = await instance.getConfig('app_1', 'new_env', 'NEW_KEY');
       expect(config).toBe('NEW_VALUE');
     });
 
     test('add new config', async () => {
       await instance.setConfig('app_1', 'new_env', 'NEW_KEY', 'NEW_VALUE');
+
+      await waitForS3Sync();
 
       const config = await instance.getConfig('app_1', 'new_env', 'NEW_KEY');
       expect(config).toBe('NEW_VALUE');
@@ -272,6 +294,8 @@ describe('[nfig][provider][fs]', () => {
   describe('deleteConfig', () => {
     test('delete config value', async () => {
       await instance.deleteConfig('app_1', 'dev', 'NODE_ENV');
+
+      await waitForS3Sync();
 
       const config = await instance.getConfig('app_1', 'dev', 'NODE_ENV');
       expect(config).toBeUndefined();

@@ -27,52 +27,43 @@ export type AwsS3ProviderOptions = {
   bucketName: string;
 
   /**
-   * Root path/prefix to look for the config file
+   * Prefix (S3 object prefix = root path)
    */
-  prefix: string;
-};
-
-const DEFAULT_CONFIG: Partial<AwsS3ProviderOptions> = {
-  /**
-   * It's a good idea to add a object-key prefix (e.g. nfig_) to prevent any conflict with the currently existing files
-   * so that we can use nfig within a shared folder without any conflicts
-   */
-  prefix: '.config/nfig_',
+  prefix?: string;
 };
 
 export class AwsS3Provider implements Provider {
-  protected readonly opts: AwsS3ProviderOptions;
+  protected readonly s3Client: S3Client;
+
+  protected readonly bucketName: string;
+  protected readonly prefix: string;
 
   constructor(opts?: AwsS3ProviderOptions) {
-    const safeOpts = {
-      ...DEFAULT_CONFIG,
-      ...opts,
-    } as AwsS3ProviderOptions;
-
-    if (
-      typeof safeOpts.s3Client === 'undefined' ||
-      safeOpts.s3Client === null
-    ) {
+    if (typeof opts?.s3Client === 'undefined' || opts?.s3Client === null) {
       throw new ApplicationError(
         's3Client must be a valid instance of S3Client (AWS SDK v3)',
+        {
+          code: 'E_INVALID_S3_CLIENT',
+        },
       );
     }
 
-    if (isNonEmptyString(safeOpts.bucketName) === false) {
+    if (isNonEmptyString(opts?.bucketName) === false) {
       throw new ApplicationError('Bucket name must be a non-empty string.', {
         code: 'E_INVALID_BUCKET_NAME',
       });
     }
 
-    // we safely checked the provided values
-    this.opts = { ...safeOpts };
+    this.s3Client = opts.s3Client;
+    this.bucketName = opts.bucketName;
+    this.prefix = opts.prefix ?? '.config';
   }
 
-  protected async listFiles(pattern?: RegExp): Promise<Array<string>> {
-    const res = await this.opts.s3Client.send(
+  protected async getFileList(pattern: RegExp): Promise<Array<string>> {
+    const res = await this.s3Client.send(
       new ListObjectsV2Command({
-        Bucket: this.opts.bucketName,
-        Prefix: this.opts.prefix,
+        Bucket: this.bucketName,
+        Prefix: this.prefix,
       }),
     );
 
@@ -87,45 +78,68 @@ export class AwsS3Provider implements Provider {
 
   protected getEnvFilePattern(appName?: string, envName?: string): RegExp {
     return new RegExp(
-      [this.opts.prefix, `${appName ?? '*'}.${envName ?? '*'}.env`]
+      [this.prefix, `${appName ?? '*'}.${envName ?? '*'}.env`]
         .filter(isNonEmptyString)
         .join('/'),
     );
   }
 
   protected getEnvFilePath(appName: string, envName: string): string {
-    return [this.opts.prefix, appName, envName]
+    return [this.prefix, `${appName}.${envName}.env`]
       .filter(isNonEmptyString)
       .join('/');
   }
 
-  protected async readConfig(
+  protected async readEnvConfig(
     appName: string,
     envName: string,
-  ): Promise<EnvConfig> {
-    // read file content
-    const res = await this.opts.s3Client.send(
-      new GetObjectCommand({
-        Bucket: this.opts.bucketName,
-        Key: this.getEnvFilePath(appName, envName),
-      }),
-    );
+  ): Promise<EnvConfig | undefined> {
+    const objectKey = this.getEnvFilePath(appName, envName);
 
-    // read the content and transform to utf-8
-    const body = await res.Body?.transformToString('utf-8');
+    try {
+      // read file content
+      const res = await this.s3Client.send(
+        new GetObjectCommand({
+          Bucket: this.bucketName,
+          Key: objectKey,
+        }),
+      );
 
-    // parse env vars
-    return parseEnvFile(body!);
+      if (typeof res.Body === 'undefined') {
+        throw new ApplicationError(
+          `Failed to read config file '${objectKey}'`,
+          {
+            code: 'E_READ_CONFIG_FAILED',
+          },
+        );
+      }
+
+      // read the content and transform to utf-8
+      const body = await res.Body.transformToString('utf-8');
+
+      // parse env vars
+      return parseEnvFile(body!);
+    } catch (err) {
+      if (this.isS3NotFoundError(err) === false) {
+        throw err;
+      }
+    }
+
+    return undefined;
   }
 
-  protected async writeConfig(
+  protected isS3NotFoundError(err: any): boolean {
+    return typeof err.Code === 'string' && err.Code === 'NoSuchKey';
+  }
+
+  protected async writeEnvConfig(
     appName: string,
     envName: string,
     configs: EnvConfig,
   ): Promise<void> {
-    await this.opts.s3Client.send(
+    await this.s3Client.send(
       new PutObjectCommand({
-        Bucket: this.opts.bucketName,
+        Bucket: this.bucketName,
         Key: this.getEnvFilePath(appName, envName),
         Body: Object.keys(configs)
           .reduce<Array<string>>((acc, key) => {
@@ -142,7 +156,7 @@ export class AwsS3Provider implements Provider {
   protected async readFiles(
     pattern: RegExp,
   ): Promise<Record<string, AppConfig>> {
-    const envFiles = await this.listFiles(pattern);
+    const envFiles = await this.getFileList(pattern);
 
     return envFiles.reduce(async (accPromise, filePath) => {
       const fileName = basename(filePath, undefined);
@@ -153,11 +167,15 @@ export class AwsS3Provider implements Provider {
       // safely create application or use existing one
       acc[appName] = acc[appName] ?? {};
 
-      // safely create env or use existing one
-      acc[appName][envName] = acc[appName][envName] ?? {};
+      const envConfig = await this.readEnvConfig(appName, envName);
 
-      // read file content
-      acc[appName][envName] = await this.readConfig(appName, envName);
+      if (typeof envConfig !== 'undefined') {
+        // safely create env or use existing one
+        acc[appName][envName] = acc[appName][envName] ?? {};
+
+        // read file content
+        acc[appName][envName] = envConfig;
+      }
 
       return acc;
     }, Promise.resolve({} as Record<string, AppConfig>));
@@ -170,15 +188,20 @@ export class AwsS3Provider implements Provider {
 
   async clear(): Promise<void> {
     const pattern = this.getEnvFilePattern();
-    const envFiles = await this.listFiles(pattern);
-
+    const envFiles = await this.getFileList(pattern);
     for (const objectKey of envFiles) {
-      await this.opts.s3Client.send(
-        new DeleteObjectCommand({
-          Bucket: this.opts.bucketName,
-          Key: objectKey,
-        }),
-      );
+      try {
+        await this.s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucketName,
+            Key: objectKey,
+          }),
+        );
+      } catch (err) {
+        if (this.isS3NotFoundError(err) === false) {
+          throw err;
+        }
+      }
     }
   }
 
@@ -194,38 +217,34 @@ export class AwsS3Provider implements Provider {
     // iterate over environment names
     for (const envName in config) {
       // write environment configuration to a dedicated file prefixed with the app name
-      this.writeConfig(appName, envName, config[envName]);
+      this.writeEnvConfig(appName, envName, config[envName]);
     }
   }
 
   async deleteAppConfig(appName: string): Promise<void> {
     const pattern = this.getEnvFilePattern(appName);
-    const allFiles = await this.listFiles(pattern);
-
-    if (allFiles.length === 0) {
-      return;
+    const envFiles = await this.getFileList(pattern);
+    for (const objectKey of envFiles) {
+      try {
+        await this.s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.bucketName,
+            Key: objectKey,
+          }),
+        );
+      } catch (err) {
+        if (this.isS3NotFoundError(err) === false) {
+          throw err;
+        }
+      }
     }
-
-    // find files matching with the pattern
-    const files = this.findFiles(pattern);
-
-    // unlink/delete file(s)
-    files.forEach(unlinkSync);
   }
 
   async getEnvConfig(
     appName: string,
     envName: string,
   ): Promise<EnvConfig | undefined> {
-    const pattern = this.getFilePathOrPattern(appName, envName);
-
-    if (this.checkPatternHasMatch(pattern) === false) {
-      return undefined;
-    }
-
-    const configs = this.readFiles(pattern);
-
-    return configs[appName][envName];
+    return await this.readEnvConfig(appName, envName);
   }
 
   async setEnvConfig(
@@ -233,21 +252,22 @@ export class AwsS3Provider implements Provider {
     envName: string,
     config: EnvConfig,
   ): Promise<void> {
-    this.writeConfig(appName, envName, config);
+    await this.writeEnvConfig(appName, envName, config);
   }
 
   async deleteEnvConfig(appName: string, envName: string): Promise<void> {
-    const pattern = this.getFilePathOrPattern(appName, envName);
-
-    if (this.checkPatternHasMatch(pattern) === false) {
-      return;
+    try {
+      await this.s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: this.getEnvFilePath(appName, envName),
+        }),
+      );
+    } catch (err) {
+      if (this.isS3NotFoundError(err) === false) {
+        throw err;
+      }
     }
-
-    // find files matching with the pattern
-    const files = this.findFiles(pattern);
-
-    // unlink/delete file(s)
-    files.forEach(unlinkSync);
   }
 
   async getConfig(
@@ -255,15 +275,8 @@ export class AwsS3Provider implements Provider {
     envName: string,
     key: string,
   ): Promise<string | undefined> {
-    const pattern = this.getFilePathOrPattern(appName, envName);
-
-    if (this.checkPatternHasMatch(pattern) === false) {
-      return undefined;
-    }
-
-    const configs = this.readFiles(pattern);
-
-    return configs[appName][envName][key];
+    const envConfig = await this.readEnvConfig(appName, envName);
+    return typeof envConfig === 'undefined' ? undefined : envConfig[key];
   }
 
   async setConfig(
@@ -272,24 +285,12 @@ export class AwsS3Provider implements Provider {
     key: string,
     val: string,
   ): Promise<void> {
-    const currentConfig = await this.getEnvConfig(appName, envName);
+    let envConfig = await this.readEnvConfig(appName, envName);
 
-    // configuration not found (either app or env)
-    if (typeof currentConfig === 'undefined') {
-      // create a new configuration
-      this.writeConfig(appName, envName, {
-        [key]: val,
-      });
-      return;
-    }
+    envConfig = envConfig ?? {};
+    envConfig[key] = val;
 
-    // write to the file
-    await this.setEnvConfig(appName, envName, {
-      // clone current configuration
-      ...currentConfig,
-      // add/update configuration
-      [key]: val,
-    });
+    await this.writeEnvConfig(appName, envName, envConfig);
   }
 
   async deleteConfig(
@@ -297,24 +298,13 @@ export class AwsS3Provider implements Provider {
     envName: string,
     key: string,
   ): Promise<void> {
-    const currentConfig = await this.getEnvConfig(appName, envName);
+    const envConfig = await this.readEnvConfig(appName, envName);
 
-    // configuration not found (either app or env)
-    if (typeof currentConfig === 'undefined') {
-      // create a new configuration
-      this.writeConfig(appName, envName, {});
+    if (typeof envConfig === 'undefined') {
       return;
     }
 
-    // exclude requested key from config
-    const updatedConfig = Object.keys(currentConfig)
-      .filter((_) => _ !== key)
-      .reduce((acc, key) => {
-        acc[key] = currentConfig[key];
-        return acc;
-      }, {} as Record<string, string>);
-
-    // write to the file
-    await this.setEnvConfig(appName, envName, updatedConfig);
+    delete envConfig[key];
+    await this.writeEnvConfig(appName, envName, envConfig);
   }
 }

@@ -1,11 +1,41 @@
 {
   "name": "nfig-provider-s3",
   "version": "0.1.0",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "rebuild": "run-s clean build",
+    "test": "jest",
+    "test:watch": "npm run test -- --watch"
+  },
+  "keywords": [
+    "nfig",
+    "config",
+    "configuration",
+    "env",
+    "environment",
+    "variable",
+    "dev",
+    "nfig-provider",
+    "aws",
+    "s3",
+    "aws-s3",
+    "nfig-provider-aws"
+  ],
   "dependencies": {
     "@aws-sdk/client-s3": "^3.234.0",
-    "error-lib": "^2.0.0"
+    "error-lib": "^2.0.0",
+    "nfig-common": "^0.1.9"
   },
   "devDependencies": {
+    "@jest/globals": "^29.2.2",
+    "@types/jest": "^29.2.0",
+    "env-var": "^7.3.0",
+    "jest": "^29.2.2",
+    "ts-jest": "^29.0.3",
     "type-fest": "^3.4.0"
   }
 }
