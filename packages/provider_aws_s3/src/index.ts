@@ -3,7 +3,6 @@ import { EOL } from 'node:os';
 
 import { parse as parseEnvFile } from 'dotenv';
 import { AppConfig, EnvConfig, Provider } from 'nfig-common';
-
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -11,6 +10,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+
 import { ApplicationError } from 'error-lib';
 
 import { isNonEmptyString } from './utils';

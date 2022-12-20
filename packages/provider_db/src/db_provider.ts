@@ -1,5 +1,6 @@
 import { Connection, Repository } from 'typeorm';
 import { AppConfig, EnvConfig, Provider } from 'nfig-common';
+
 import { Config } from './models';
 
 export type DatabaseProviderOptions = {

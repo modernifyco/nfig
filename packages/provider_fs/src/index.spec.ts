@@ -1,5 +1,6 @@
 import { join as joinPath } from 'node:path';
 import { mkdirSync } from 'node:fs';
+
 import rimraf from 'rimraf';
 
 import { FileSystemProvider } from './index';
