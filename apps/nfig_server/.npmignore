@@ -4,3 +4,5 @@ src/
 .gitignore
 tsconfig.json
 tsconfig.build.json
+.dockerignore
+Dockerfile

@@ -1,0 +1,11 @@
+{
+  "name": "nfig-provider-s3",
+  "version": "0.1.0",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.234.0",
+    "error-lib": "^2.0.0"
+  },
+  "devDependencies": {
+    "type-fest": "^3.4.0"
+  }
+}

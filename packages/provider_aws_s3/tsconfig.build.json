@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src"
+  },
+  "exclude": ["**/*.spec.ts", "coverage/**", "jest.config.js"]
+}
