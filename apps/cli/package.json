@@ -1,4 +1,7 @@
 {
   "name": "nfig",
-  "version": "0.0.3"
+  "version": "0.1.0",
+  "dependencies": {
+    "rc": "^1.2.8"
+  }
 }
